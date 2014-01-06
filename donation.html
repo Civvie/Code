@@ -1,0 +1,151 @@
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Donation Alert</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+        <script src="https://www.streamdonations.net/socket.io/socket.io.js"></script>
+        <script type="text/javascript" language="javascript">
+          var socket = io.connect('https://www.streamdonations.net/');
+          socket.on('login', function () {
+            console.log("Connected to Socket Server");
+            if(getParameterByName("channel") && getParameterByName("key")) {
+              socket.emit('auth', {
+                channel: getParameterByName("channel"),
+                key: getParameterByName("key")
+              });
+            }
+          });
+
+          socket.on('authenticated', function () {
+            console.log('Logged into server');
+          });
+
+          socket.on('authentication failed', function () {
+            console.log('Login into server failed');
+          });
+
+          socket.on('new donation', function (data) {
+            var minimum = getParameterByName("amount");
+            if(minimum && parseFloat(minimum)) {
+              if(parseFloat(data["amount"]) >= parseFloat(minimum)) {
+                newDonation(data["twitchUsername"],data["amount"],data["currencySymbol"]);
+              }
+            }
+          });
+
+          var timer = false;
+          var alertSound = false;
+          function newDonation(user, amount, symbol) {
+            if(timer) clearTimeout(timer);
+            if(alertSound) alertSound.play();
+            $("#new-donation").html(symbol+amount+' from '+user);
+            $("#donation-alert .text").css("font-size", "45px");
+            $("#donation-alert").fadeIn("slow", function() {
+              while($('#donation-alert .text')[0].scrollWidth > $('#donation-alert .text').width()) {
+                var currentSize = parseInt($("#donation-alert .text").css("font-size").replace("px",""));
+                $("#donation-alert .text").css("font-size", (currentSize-1)+"px");
+              }
+            });
+            timer = setTimeout(function() {
+              $("#donation-alert").fadeOut("slow");
+            }, 10000);
+          }
+
+          function getParameterByName(name) {
+            name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+            var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+                results = regex.exec(location.search);
+            return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+          }
+
+          $(document).ready(function() {
+            if(getParameterByName("chroma") === "true") {
+              $("body").css("background-color","#00ff00");
+            }
+
+            var channel = getParameterByName("channel"),
+                type = getParameterByName("type"),
+                alert = getParameterByName("alert"),
+                sound = false;
+
+            if(channel) {
+              socket.on('ohai', function () {
+                console.log("Joining channel");
+                socket.emit('join', channel);
+              });
+
+              socket.on('much connect', function () {
+                console.log("Connected to channel socket");
+              });
+
+              if(type === "stacked" || type === "custom-centered") {
+                $('#donation-alert .text').css({
+                  'margin-left':'15px',
+                  'width':'550px'
+                });
+              }
+
+              if(type === "custom-left") {
+                $('#donation-alert .text').css({
+                  'margin-left':'25px'
+                });
+              }
+
+              if(alert) {
+                $('#donation-alert').css('background-image','url('+decodeURIComponent(alert)+')');
+              }
+
+              if(sound) {
+                alertSound = new Audio(decodeURIComponent(sound));
+                alertSound.addEventListener("loadeddata", function() {
+                  if(getParameterByName("preview") === "true") {
+                    newDonation("Test_user", "100", "$");
+                  }
+                });
+              } else {
+                if(getParameterByName("preview") === "true") {
+                  newDonation("Test_user", "100", "$");
+                }
+              }
+            }
+          });
+        </script>
+        <style>
+  
+            body {
+                background-color: transparent;
+                color: white;
+            }
+
+            #donation-alert {
+              display: none;
+              position: absolute;
+              top: 0px;
+              left: 0px;
+              width: 580px;
+              height: 110px;
+            }
+
+            #donation-alert .text {
+              margin-left: 170px;
+              padding-top: 45px;
+              text-align: center;
+              width: 385px;
+              line-height: 45px;
+              vertical-align: middle;
+              font-size: 45px;
+              font-family: Impact;
+              text-shadow: 2px 2px 1px #000;
+              white-space: nowrap;
+              color: #ffffff;
+            }
+
+        </style>
+    </head>
+    <body>
+      <div id="donation-alert">
+       <div class="text" id="new-donation"></div>
+      </div>
+    </body>
+</html>
