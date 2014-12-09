@@ -1,0 +1,1 @@
+ffmpeg -i rtmp://localhost/live2/split -vcodec libx264 -preset veryfast -b:v 288k -maxrate 288k -bufsize 288k -s 852x480 -sws_flags lanczos -r 30 -acodec copy -f flv rtmp://localhost/live3/splitcmd
